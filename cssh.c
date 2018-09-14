@@ -14,7 +14,6 @@ ___________________________________
 Requirements we still need:
 
 • Environment Variables
-• Prompt - All we need is to add the name of the machine
 • Adding '~' path to home directory
 • I/O Redirection - (Works but we need to make identical to bash)
 • Piping
@@ -227,17 +226,26 @@ int cssh_execute(char **args) {
 }
 
 int main (int argc, char ** argv) {
-    long num;
-    char *buffer ;
+    long num;                     // Prompt Set-Up
+    int num2;
+    char *b1 ;
+    char *b2[100];
     char *path;
 
-    char *user = getenv("USER");
+    char *user = getenv("USER");      // Get User
     strcat(user, "@");
-    path = getcwd(buffer, (size_t)num);
 
-    strcat(user , "machine  ::  ");
+    num2 = gethostname(b2, sizeof(b2));   //  Get Machine
+
+    path = getcwd(b1, (size_t)num);     // Get Path
+
+    strcat(user , b2);
+    strcat(user , " :: ");
     strcat(user, path);
-    strcat(user, "-> ");
-    cssh_loop(user);
-    return EXIT_SUCCESS;
+    strcat(user, " -> ");
+
+
+    cssh_loop(user);              // Main Loop
+
+    return EXIT_SUCCESS;          // Exit
 }
