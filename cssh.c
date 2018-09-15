@@ -59,6 +59,39 @@ int (*builtin_func[]) (char **) = {
   &cssh_pwd,
   &cssh_ls
 };
+/*
+
+Environment Variable Handler:
+
+Takes in Environment Variable argument
+and returns variable value
+
+*/
+
+char* env_var_switch(char* var){
+  char *a;
+
+  if (strcmp(var,"$PATH") == 0){
+    a = getenv("PATH");
+    return(a);      // Get Path
+  } else if (strcmp(var,"$HOME") == 0){
+    a = getenv("HOME");
+    return(a);      // Get Home Path
+  }
+ else if (strcmp(var,"$USER") == 0){
+   a = getenv("USER");
+   return(a);      // Get User
+} else if (strcmp(var,"$SHELL") == 0){
+  a = getenv("SHELL");
+  return(a);      // Get Shell
+} else if (strcmp(var,"$PWD") == 0){
+  a = getenv("PWD");
+  return(a);      // Get Current Path
+}
+
+return var;
+
+}
 
 int cssh_launch(char **args) {
   pid_t p, wp;
@@ -145,16 +178,37 @@ char **cssh_split(char *line) {
   return tokens;
 }
 
-void cssh_loop(char* user) {
+void cssh_loop() {
   char * line;
   char ** args;
   int status;
-
   do {
+    long num;                     // Prompt Set-Up
+    int num2;
+    char *b1 ;
+    char *b2[100];
+    char *path;
+    char *name;
+    name = getenv("USER");      // Get User
+    char *user[40];
+    strcpy(user, name);
+    strcat(user, "@");
+    num2 = gethostname(b2, sizeof(b2));   //  Get Machine
+
+    path = getcwd(b1, (size_t)num);     // Get Path
+
+    strcat(user , b2);
+    strcat(user , " :: ");
+    strcat(user, path);
+    strcat(user, " -> ");
     line = readline(user);
     args = cssh_split(line);
+    char* var[sizeof(args[1])-1];
+    strcpy(var,args[1]);
+    args[1] = env_var_switch(var);
     status = cssh_execute(args);
 
+    memset(user, 0, sizeof(user));
     free(line);
     free(args);
   } while(status);
@@ -199,6 +253,7 @@ int cssh_ls(char **args) {
       perror("Could not open directory");
   }
   else {
+
     d = opendir(args[1]);
     if(d) {
       while((dir = readdir(d))) {
@@ -226,26 +281,9 @@ int cssh_execute(char **args) {
 }
 
 int main (int argc, char ** argv) {
-    long num;                     // Prompt Set-Up
-    int num2;
-    char *b1 ;
-    char *b2[100];
-    char *path;
-
-    char *user = getenv("USER");      // Get User
-    strcat(user, "@");
-
-    num2 = gethostname(b2, sizeof(b2));   //  Get Machine
-
-    path = getcwd(b1, (size_t)num);     // Get Path
-
-    strcat(user , b2);
-    strcat(user , " :: ");
-    strcat(user, path);
-    strcat(user, " -> ");
 
 
-    cssh_loop(user);              // Main Loop
+    cssh_loop();              // Main Loop
 
     return EXIT_SUCCESS;          // Exit
 }
