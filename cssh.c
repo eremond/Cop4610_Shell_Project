@@ -13,10 +13,9 @@ ___________________________________
 
 Requirements we still need:
 
-• Environment Variables
 • Adding '~' path to home directory
 • I/O Redirection - (Works but we need to make identical to bash)
-• Piping
+• Piping (Refining the functionality)
 
 */
 
@@ -24,6 +23,7 @@ Requirements we still need:
 #include <stdlib.h>
 #include <dirent.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
@@ -33,9 +33,20 @@ Requirements we still need:
 #define TOK_DELIMS " \t\r\n\a"
 #define TOK_BUFF 64
 
-char prompt[] = "USER@MACHINE :: PWD -> ";
+void fullPrompt() {
+  long num;
+  char *b;
+  char *path; 
+  path = getcwd(b, (size_t)num);
+  if(path == NULL)
+    printf("%s@%s :: %s -> ", getenv("USER"), getenv("MACHINE"), getenv("PWD"));
+  else
+    printf("%s@%s :: %s -> ", getenv("USER"), getenv("MACHINE"), path);
+}
 
+static const char prompt[] = "";
 
+struct timespec start, stop;
 
 int cssh_cd(char **args);
 int cssh_exit(char **args);
@@ -95,7 +106,9 @@ return var;
 
 int cssh_launch(char **args) {
   pid_t p, wp;
-  int stat, fd0, fd1, i;
+  int stat, fd0, fd1, i, fd[2];
+  int bg_flag = 0;
+  char buf;
   p = fork();
   if(p == 0) {
     for(i = 0; args[i] != '\0'; i++) {
@@ -115,6 +128,27 @@ int cssh_launch(char **args) {
 	dup2(fd1, STDOUT_FILENO);
         close(fd1);
       }
+      if(strcmp(args[i],"|") == 0) {
+	pipe(fd);
+	if((p = fork()) == 0) {
+	  dup2(fd[1], 1);
+	  close(fd[0]);
+	  close(fd[1]);
+	  execvp(args[i-1], args);
+        }
+	else {
+	  dup2(fd[0], 0);
+	  close(fd[0]);
+	  close(fd[1]);
+	  execvp(args[i+1], args);
+	}
+      }
+      if(strcmp(args[i], "&") == 0) {
+	if(i != 0 && i == sizeof(args-1)) {
+      	  bg_flag = 1;
+	  break;
+	}
+      }
     }
     if(execvp(args[0], args) == -1) {
       perror("cssh");
@@ -125,10 +159,19 @@ int cssh_launch(char **args) {
     perror("cssh");
   }
   else {
-    do {
-      wp = waitpid(p, &stat, WUNTRACED);
-    } while(!WIFEXITED(stat) && WIFSIGNALED(stat));
+    //if(!bg_flag) {
+      do {
+        wp = waitpid(p, &stat, WUNTRACED);
+      } while(!WIFEXITED(stat) && WIFSIGNALED(stat));
+    //}
+    /*else {
+      printf("background pid: %d\n", p);
+    }*/
   }
+  /*wp = waitpid(-1, &stat, WNOHANG);
+  while (wp > 0) {
+    printf("completed bg pid: %d\n", wp);
+  }*/
   return 1;
 }
 
@@ -162,7 +205,10 @@ char **cssh_split(char *line) {
   }
   token = strtok(_line, "\a");
   while(token != NULL) {
-    tokens[position] = token;
+    char * temp;
+    temp = token;
+    char * temp2 = env_var_switch(temp);
+    tokens[position] = temp2;
     position++;
     if(position >= buff) {
       buff += TOK_BUFF;
@@ -182,15 +228,16 @@ void cssh_loop() {
   char * line;
   char ** args;
   int status;
+  clock_gettime(CLOCK_REALTIME, &start);
   do {
-    long num;                     // Prompt Set-Up
+    /* long num;                     // Prompt Set-Up
     int num2;
-    char *b1 ;
-    char *b2[100];
+    char *b1;
+    char *b2;
     char *path;
     char *name;
     name = getenv("USER");      // Get User
-    char *user[40];
+    char *user;
     strcpy(user, name);
     strcat(user, "@");
     num2 = gethostname(b2, sizeof(b2));   //  Get Machine
@@ -200,15 +247,20 @@ void cssh_loop() {
     strcat(user , b2);
     strcat(user , " :: ");
     strcat(user, path);
-    strcat(user, " -> ");
-    line = readline(user);
+    strcat(user, " -> "); */
+    fullPrompt();
+    line = readline(prompt);
     args = cssh_split(line);
-    char* var[sizeof(args[1])-1];
-    strcpy(var,args[1]);
-    args[1] = env_var_switch(var);
+    //char* var;
+    //strcpy(var,args[0]);
+    int i = 0;
+    /*while(i != sizeof(args)) {
+ 	//strcpy(var,args[i]);
+    	args[i] = env_var_switch(args[i]);
+	i++;
+    }*/
     status = cssh_execute(args);
 
-    memset(user, 0, sizeof(user));
     free(line);
     free(args);
   } while(status);
@@ -227,7 +279,12 @@ int cssh_cd(char **args) {
 }
 
 int cssh_exit(char **args) {
-  return 0;
+  clock_gettime(CLOCK_REALTIME, &stop);
+  double elapsed2 = (stop.tv_sec - start.tv_sec);
+  printf("Exiting...\n\tSession time: %ds \n", (int)elapsed2);
+  if(stop.tv_sec != 0)
+  //return 0;
+    exit(EXIT_SUCCESS);
 }
 
 int cssh_pwd(char **args) {
@@ -284,6 +341,6 @@ int main (int argc, char ** argv) {
 
 
     cssh_loop();              // Main Loop
-
+    printf("poot");
     return EXIT_SUCCESS;          // Exit
 }
