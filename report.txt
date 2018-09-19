@@ -1,0 +1,18 @@
+==============================
+Problem Statement
+==============================
+In this project we are implementing a bash shell using c.  We are essentially
+trying to get the output of this program to be as similar as possible to bash
+with all the neat features like piping and the required built-ins.
+
+==============================
+Steps Taken To Solve Problem
+==============================
+1) Experimented with bash on the linprog server.
+2) Took notes on output for required built ins, piping , I/O, etc.
+3) Implemented User Input / Parsing to get commands/arguments
+4) Implemented Built-Ins
+5) Implemented Input Redirection
+6) Implemented Environment Variables
+7) Ran tests to make sure all requirements were working and satisfied
+8) Completed
