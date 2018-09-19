@@ -13,9 +13,10 @@ ___________________________________
 
 Requirements we still need:
 
-• Adding '~' path to home directory
+• Adding '~' Path Resolution
 • I/O Redirection - (Works but we need to make identical to bash)
 • Piping (Refining the functionality)
+• Background Processing
 
 */
 
@@ -36,7 +37,7 @@ Requirements we still need:
 void fullPrompt() {
   long num;
   char *b;
-  char *path; 
+  char *path;
   path = getcwd(b, (size_t)num);
   if(path == NULL)
     printf("%s@%s :: %s -> ", getenv("USER"), getenv("MACHINE"), getenv("PWD"));
