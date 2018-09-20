@@ -13,7 +13,6 @@ ___________________________________
 
 Requirements we still need:
 
-• Adding '~' Path Resolution
 • I/O Redirection - (Works but we need to make identical to bash)
 • Piping (Refining the functionality)
 • Background Processing
@@ -34,6 +33,12 @@ Requirements we still need:
 #define TOK_DELIMS " \t\r\n\a"
 #define TOK_BUFF 64
 
+/*
+
+PROMPT
+
+*/
+
 void fullPrompt() {
   long num;
   char *b;
@@ -53,12 +58,14 @@ int cssh_cd(char **args);
 int cssh_exit(char **args);
 int cssh_pwd(char **args);
 int cssh_ls(char **args);
+int cssh_io(char **args);
 
 char *builtin[] = {
   "cd",
   "exit",
   "pwd",
-  "ls"
+  "ls",
+  "io"
 };
 
 int num_builtins() {
@@ -86,7 +93,7 @@ char* env_var_switch(char* var){
   if (strcmp(var,"$PATH") == 0){
     a = getenv("PATH");
     return(a);      // Get Path
-  } else if (strcmp(var,"$HOME") == 0){
+  } else if (strcmp(var,"$HOME") == 0 || strcmp(var,"~") == 0 ){
     a = getenv("HOME");
     return(a);      // Get Home Path
   }
@@ -161,6 +168,10 @@ int cssh_launch(char **args) {
   }
   else {
     //if(!bg_flag) {
+    /*
+    if (args[0] == "io"){
+      printf("background pid: %d\n", p);
+    */
       do {
         wp = waitpid(p, &stat, WUNTRACED);
       } while(!WIFEXITED(stat) && WIFSIGNALED(stat));
@@ -225,47 +236,36 @@ char **cssh_split(char *line) {
   return tokens;
 }
 
+/*
+
+MAIN LOOP
+
+*/
+
 void cssh_loop() {
   char * line;
   char ** args;
   int status;
   clock_gettime(CLOCK_REALTIME, &start);
   do {
-    /* long num;                     // Prompt Set-Up
-    int num2;
-    char *b1;
-    char *b2;
-    char *path;
-    char *name;
-    name = getenv("USER");      // Get User
-    char *user;
-    strcpy(user, name);
-    strcat(user, "@");
-    num2 = gethostname(b2, sizeof(b2));   //  Get Machine
 
-    path = getcwd(b1, (size_t)num);     // Get Path
-
-    strcat(user , b2);
-    strcat(user , " :: ");
-    strcat(user, path);
-    strcat(user, " -> "); */
     fullPrompt();
     line = readline(prompt);
     args = cssh_split(line);
-    //char* var;
-    //strcpy(var,args[0]);
+
     int i = 0;
-    /*while(i != sizeof(args)) {
- 	//strcpy(var,args[i]);
-    	args[i] = env_var_switch(args[i]);
-	i++;
-    }*/
     status = cssh_execute(args);
 
     free(line);
     free(args);
   } while(status);
 }
+
+/*
+
+BUILT IN: CD
+
+*/
 
 int cssh_cd(char **args) {
   if(args[1] == NULL) {
@@ -279,6 +279,27 @@ int cssh_cd(char **args) {
   return 1;
 }
 
+/*
+
+BUILT IN: io
+
+*/
+
+int cssh_io(char **args) {
+printf("hello");
+
+
+  return 1;
+}
+
+/*
+
+/*
+
+BUILT IN: EXIT
+
+*/
+
 int cssh_exit(char **args) {
   clock_gettime(CLOCK_REALTIME, &stop);
   double elapsed2 = (stop.tv_sec - start.tv_sec);
@@ -288,12 +309,24 @@ int cssh_exit(char **args) {
     exit(EXIT_SUCCESS);
 }
 
+/*
+
+BUILT IN: PWD
+
+*/
+
 int cssh_pwd(char **args) {
   char pwd[1024];
   getcwd(pwd, sizeof(pwd));
   printf("%s\n", pwd);
   return 1;
 }
+
+/*
+
+BUILT IN: LS
+
+*/
 
 int cssh_ls(char **args) {
   DIR *d;
@@ -337,6 +370,13 @@ int cssh_execute(char **args) {
   }
   return cssh_launch(args);
 }
+
+/*
+
+MAIN
+
+*/
+
 
 int main (int argc, char ** argv) {
 
