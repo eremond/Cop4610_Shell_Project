@@ -42,7 +42,7 @@ PROMPT
 void fullPrompt() {
   long num;
   char *b;
-  char *path;
+  char *path; 
   path = getcwd(b, (size_t)num);
   if(path == NULL)
     printf("%s@%s :: %s -> ", getenv("USER"), getenv("MACHINE"), getenv("PWD"));
@@ -54,11 +54,11 @@ static const char prompt[] = "";
 
 struct timespec start, stop;
 
-int cssh_cd(char **args);
-int cssh_exit(char **args);
-int cssh_pwd(char **args);
-int cssh_ls(char **args);
-int cssh_io(char **args);
+int shell_cd(char **args);
+int shell_exit(char **args);
+int shell_pwd(char **args);
+int shell_ls(char **args);
+int shell_io(char **args);
 
 char *builtin[] = {
   "cd",
@@ -73,10 +73,11 @@ int num_builtins() {
 }
 
 int (*builtin_func[]) (char **) = {
-  &cssh_cd,
-  &cssh_exit,
-  &cssh_pwd,
-  &cssh_ls
+  &shell_cd,
+  &shell_exit,
+  &shell_pwd,
+  &shell_ls,
+  &shell_io
 };
 /*
 
@@ -93,7 +94,7 @@ char* env_var_switch(char* var){
   if (strcmp(var,"$PATH") == 0){
     a = getenv("PATH");
     return(a);      // Get Path
-  } else if (strcmp(var,"$HOME") == 0 || strcmp(var,"~") == 0 ){
+  } else if (strcmp(var,"$HOME") == 0 || strcmp(var,"~") == 0){
     a = getenv("HOME");
     return(a);      // Get Home Path
   }
@@ -112,7 +113,7 @@ return var;
 
 }
 
-int cssh_launch(char **args) {
+int shell_launch(char **args) {
   pid_t p, wp;
   int stat, fd0, fd1, i, fd[2];
   int bg_flag = 0;
@@ -121,17 +122,29 @@ int cssh_launch(char **args) {
   if(p == 0) {
     for(i = 0; args[i] != '\0'; i++) {
       if(strcmp(args[i],"<") == 0) {
-	if((fd0 = open(args[i+1], O_RDONLY)) < 0) {
-          perror("cant open file");
-          exit(0);
+	if(args[i+1] == NULL) {
+	  fprintf(stderr, "Missing name for redirect\n");
+	  return 1;
+        }
+	else {
+	  if((fd0 = open(args[i+1], O_RDONLY)) < 0) {
+            perror("cant open file");
+            exit(0);
+          }
         }
 	dup2(fd0, 0);
 	close(fd0);
       }
       if(strcmp(args[i],">") == 0) {
-        if((fd1 = open(args[i+1], O_WRONLY | O_CREAT, 0644)) < 0) {
-	  perror("cant open file\n");
-	  exit(0);
+	if(args[i+1] == NULL) {
+          fprintf(stderr, "Missing name for redirect\n");
+          return 1;
+        }
+	else {
+          if((fd1 = open(args[i+1], O_WRONLY | O_CREAT, 0644)) < 0) {
+	    perror("cant open file\n");
+	    exit(0);
+	  }
 	}
 	dup2(fd1, STDOUT_FILENO);
         close(fd1);
@@ -159,18 +172,18 @@ int cssh_launch(char **args) {
       }
     }
     if(execvp(args[0], args) == -1) {
-      perror("cssh");
+      perror("shell");
     }
     exit(EXIT_FAILURE);
   }
   else if(p < 0) {
-    perror("cssh");
+    perror("shell");
   }
   else {
     //if(!bg_flag) {
-    /*
-    if (args[0] == "io"){
-      printf("background pid: %d\n", p);
+     /*
+     if (args[0] == "io")
+       printf("background pid: %d\n", p);
     */
       do {
         wp = waitpid(p, &stat, WUNTRACED);
@@ -205,14 +218,14 @@ char * tok_prep(char * line) {
   return line;
 }
 
-char **cssh_split(char *line) {
+char **shell_split(char *line) {
   char * _line = tok_prep(line);
   int buff = TOK_BUFF;
   int position = 0;
   char **tokens = malloc(buff * sizeof(char*));
   char *token;
   if(!tokens) {
-    fprintf(stderr, "cssh: alloc error\n");
+    fprintf(stderr, "shell: alloc error\n");
     exit(EXIT_FAILURE);
   }
   token = strtok(_line, "\a");
@@ -226,7 +239,7 @@ char **cssh_split(char *line) {
       buff += TOK_BUFF;
       tokens = realloc(tokens, buff * sizeof(char*));
       if(!tokens) {
-       fprintf(stderr, "cssh: alloc error\n");
+       fprintf(stderr, "shell: alloc error\n");
        exit(EXIT_FAILURE);
       }
     }
@@ -240,21 +253,19 @@ char **cssh_split(char *line) {
 
 MAIN LOOP
 
-*/
+*/ 
 
-void cssh_loop() {
+void shell_loop() {
   char * line;
   char ** args;
   int status;
   clock_gettime(CLOCK_REALTIME, &start);
   do {
-
     fullPrompt();
     line = readline(prompt);
-    args = cssh_split(line);
-
+    args = shell_split(line);
     int i = 0;
-    status = cssh_execute(args);
+    status = shell_execute(args);
 
     free(line);
     free(args);
@@ -262,18 +273,21 @@ void cssh_loop() {
 }
 
 /*
-
+ 
 BUILT IN: CD
 
 */
 
-int cssh_cd(char **args) {
+int shell_cd(char **args) {
   if(args[1] == NULL) {
-    fprintf(stderr, "cssh: expected argument to \"cd\"\n");
+    chdir(getenv("HOME"));
   }
   else {
-    if(chdir(args[1]) != 0) {
-      perror("cssh");
+    if(args[2] != NULL) {
+      fprintf(stderr, "cd: Too many arguments\n");
+    }
+    else if(chdir(args[1]) != 0) {
+      perror("cd");
     }
   }
   return 1;
@@ -284,23 +298,18 @@ int cssh_cd(char **args) {
 BUILT IN: io
 
 */
-
-int cssh_io(char **args) {
-printf("hello");
-
+int shell_io(char **args) {
+  printf("hello");
 
   return 1;
 }
-
-/*
-
 /*
 
 BUILT IN: EXIT
 
 */
 
-int cssh_exit(char **args) {
+int shell_exit(char **args) {
   clock_gettime(CLOCK_REALTIME, &stop);
   double elapsed2 = (stop.tv_sec - start.tv_sec);
   printf("Exiting...\n\tSession time: %ds \n", (int)elapsed2);
@@ -315,7 +324,7 @@ BUILT IN: PWD
 
 */
 
-int cssh_pwd(char **args) {
+int shell_pwd(char **args) {
   char pwd[1024];
   getcwd(pwd, sizeof(pwd));
   printf("%s\n", pwd);
@@ -328,7 +337,7 @@ BUILT IN: LS
 
 */
 
-int cssh_ls(char **args) {
+int shell_ls(char **args) {
   DIR *d;
   struct dirent *dir;
   d = opendir(".");
@@ -359,7 +368,7 @@ int cssh_ls(char **args) {
   return 1;
 }
 
-int cssh_execute(char **args) {
+int shell_execute(char **args) {
   int i;
   if(args[0] == NULL)
     return 1;
@@ -368,7 +377,7 @@ int cssh_execute(char **args) {
       return (*builtin_func[i])(args);
     }
   }
-  return cssh_launch(args);
+  return shell_launch(args);
 }
 
 /*
@@ -377,11 +386,10 @@ MAIN
 
 */
 
-
 int main (int argc, char ** argv) {
 
 
-    cssh_loop();              // Main Loop
+    shell_loop();              // Main Loop
     printf("poot");
     return EXIT_SUCCESS;          // Exit
 }
