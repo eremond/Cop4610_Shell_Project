@@ -54,6 +54,8 @@ static const char prompt[] = "";
 
 struct timespec start, stop;
 
+static int args_size = 0;
+
 int shell_cd(char **args);
 int shell_exit(char **args);
 int shell_pwd(char **args);
@@ -113,12 +115,15 @@ return var;
 
 }
 
-int shell_launch(char **args) {
-  pid_t p, wp;
+int shell_launch(char *args[]) {
+  pid_t p, wp = -1;
   int stat, fd0, fd1, i, fd[2];
   int bg_flag = 0;
   char buf;
   p = fork();
+  while (wp > 0 && wp != -1) {
+    printf("completed bg pid: %d\n", wp);
+  }
   if(p == 0) {
     for(i = 0; args[i] != '\0'; i++) {
       if(strcmp(args[i],"<") == 0) {
@@ -180,18 +185,34 @@ int shell_launch(char **args) {
     perror("shell");
   }
   else {
-    //if(!bg_flag) {
-     /*
-     if (args[0] == "io")
-       printf("background pid: %d\n", p);
-    */
+    bg_flag = 0;
+    for(i = 0; args[i] != '\0'; i++) {
+      if(strcmp(args[i], "&") == 0) {
+        if (i != 0 && i ==(args_size - 1)) {
+          bg_flag = 1;
+          printf("BG FLAG SET\n");
+          break;
+        }
+      }
+    }
+    if(!bg_flag) {
       do {
         wp = waitpid(p, &stat, WUNTRACED);
-      } while(!WIFEXITED(stat) && WIFSIGNALED(stat));
-    //}
-    /*else {
+      } while (!WIFEXITED(stat) && WIFSIGNALED(stat));
+      /*
+      wp = waitpid(-1,&stat, WNOHANG);
       printf("background pid: %d\n", p);
-    }*/
+      while (wp > 0) {
+        printf("completed bg pid: %d\n", wp);
+      }*/
+    }
+    else {
+      wp = waitpid(-1,&stat, WNOHANG);
+      printf("background pid: %d\n", p);
+      while (wp > 0) {
+        printf("completed bg pid: %d\n", wp);
+      }
+    }
   }
   /*wp = waitpid(-1, &stat, WNOHANG);
   while (wp > 0) {
@@ -219,6 +240,9 @@ char * tok_prep(char * line) {
 }
 
 char **shell_split(char *line) {
+  if(line[0] == NULL){
+    line[0] = "";
+  }
   char * _line = tok_prep(line);
   int buff = TOK_BUFF;
   int position = 0;
@@ -246,6 +270,7 @@ char **shell_split(char *line) {
     token = strtok(NULL, "\a");
   }
   tokens[position] = NULL;
+  args_size = position;
   return tokens;
 }
 
