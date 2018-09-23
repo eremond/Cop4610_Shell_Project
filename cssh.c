@@ -54,6 +54,8 @@ static const char prompt[] = "";
 
 struct timespec start, stop;
 
+static int args_size = 0;
+
 int shell_cd(char **args);
 int shell_exit(char **args);
 int shell_pwd(char **args);
@@ -113,14 +115,16 @@ return var;
 
 }
 
-int shell_launch(char **args) {
+int shell_launch(char *args[]) {
   pid_t p, wp;
   int stat, fd0, fd1, i, fd[2];
   int bg_flag = 0;
   char buf;
   p = fork();
+  //Child
   if(p == 0) {
     for(i = 0; args[i] != '\0'; i++) {
+      //Input
       if(strcmp(args[i],"<") == 0) {
 	if(args[i+1] == NULL) {
 	  fprintf(stderr, "Missing name for redirect\n");
@@ -135,6 +139,7 @@ int shell_launch(char **args) {
 	dup2(fd0, 0);
 	close(fd0);
       }
+      //Output
       if(strcmp(args[i],">") == 0) {
 	if(args[i+1] == NULL) {
           fprintf(stderr, "Missing name for redirect\n");
@@ -149,6 +154,7 @@ int shell_launch(char **args) {
 	dup2(fd1, STDOUT_FILENO);
         close(fd1);
       }
+      //Pipe
       if(strcmp(args[i],"|") == 0) {
 	pipe(fd);
 	if((p = fork()) == 0) {
@@ -176,22 +182,51 @@ int shell_launch(char **args) {
     }
     exit(EXIT_FAILURE);
   }
+  //Error
   else if(p < 0) {
     perror("shell");
   }
+  //Parent
   else {
-    //if(!bg_flag) {
-     /*
-     if (args[0] == "io")
-       printf("background pid: %d\n", p);
-    */
+    bg_flag = 0;
+    for(i = 0; args[i] != '\0'; i++) {
+      //Check if this is supposed to execute in the BG
+      if(strcmp(args[i], "&") == 0) {
+        if (i != 0 && i ==(args_size - 1)) {
+          bg_flag = 1;
+          //printf("BG FLAG SET\n");
+          break;
+        }
+	else if (i != 0)
+	{
+	  bg_flag = -1;
+	  break;
+	}
+      }
+    }
+    //Foreground Execution
+    if (bg_flag==1) {
       do {
         wp = waitpid(p, &stat, WUNTRACED);
-      } while(!WIFEXITED(stat) && WIFSIGNALED(stat));
-    //}
-    /*else {
+      } while (!WIFEXITED(stat) && WIFSIGNALED(stat));
+      /*
+      wp = waitpid(-1,&stat, WNOHANG);
       printf("background pid: %d\n", p);
-    }*/
+      while (wp > 0) {
+        printf("completed bg pid: %d\n", wp);
+      }*/
+    }
+    //Background Execution
+    else if (bg_flag == 0){
+      wp = waitpid(-1,&stat, WNOHANG);
+      printf("Background pid: %d\n", p);
+      if (wp > 0) {
+        printf("Completed Background pid: %d\n", wp);
+      }
+    }
+    //Error Signal
+    else if (bg_flag == -1)
+	printf("Invalid Command\n");
   }
   /*wp = waitpid(-1, &stat, WNOHANG);
   while (wp > 0) {
@@ -219,6 +254,9 @@ char * tok_prep(char * line) {
 }
 
 char **shell_split(char *line) {
+  if(line[0] == NULL){
+    line[0] = "";
+  }
   char * _line = tok_prep(line);
   int buff = TOK_BUFF;
   int position = 0;
@@ -246,6 +284,7 @@ char **shell_split(char *line) {
     token = strtok(NULL, "\a");
   }
   tokens[position] = NULL;
+  args_size = position;
   return tokens;
 }
 
