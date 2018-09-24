@@ -7,7 +7,7 @@ The members of this project are:
 2) John Sanchez
 3) Redden Money
 
-proj_1_gonzalez_sanchez_money.tar contents:
+project1_gonzalez_sanchez_money.tar contents:
   README
   shell.c // main implementation
   makefile
@@ -25,13 +25,15 @@ $> make clean
 Known Bugs & Unfinished Portions:
   Piping works, but only one can be used at a time.
   Background processing is somewhat unfinished.
-  "io" command is incomplete.
+  "io" command is unfinished.
   Path resolution is rudamentary.
     ->Ex: "cd ~" works, "cd ~/DIRNAME" gives an error.
+  There needs to be whitespace between the redirection/pipe and the command.
 
 Special Considerations:
-
-
+  In the "exit" built-in, clock_gettime() was used instead of gettimeofday(), which is not always available to certain (notably older)
+  Linux versions, along with it being absent on Mac...
+  
 ==============================
 ==============================
 Report
