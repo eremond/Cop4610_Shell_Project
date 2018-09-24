@@ -384,6 +384,15 @@ int shell_exit(char **args) {
     exit(EXIT_SUCCESS);
 }
 
+int shell_echo(char **args) {
+  int e = 0;
+  while(args[e] != NULL) {
+	 printf(args[e]);
+	 e++;
+  }
+  return 1;
+}
+
 /*
 
 BUILT IN: PWD
