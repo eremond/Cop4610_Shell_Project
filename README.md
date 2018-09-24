@@ -34,6 +34,7 @@ Known Bugs & Unfinished Portions:
     ->Resulting from the lack of splitting the special characters and environment variables from the rest of the line.
  • There needs to be whitespace between the redirection/pipe and the command.
  • "echo" built-in does not signal an error when there is a non-existent environment variable.
+   ->"echo" built-in also does not account for single or double quotes.
  • "$SHELL" environment variable p
 
 Special Considerations:
