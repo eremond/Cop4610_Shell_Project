@@ -8,8 +8,10 @@ The members of this project are:
 3) Redden Money
 
 proj_1_gonzalez_sanchez_money.tar contents:
-cssh.c // main implementation
-makefile
+  README
+  shell.c // main implementation
+  makefile
+
 
 Completed using: linprog
 
@@ -21,6 +23,11 @@ To Clean:
 $> make clean
 
 Known Bugs & Unfinished Portions:
+  Piping works, but only one can be used at a time.
+  Background processing is somewhat unfinished.
+  "io" command is incomplete.
+  Path resolution is rudamentary.
+    ->Ex: "cd ~" works, "cd ~/DIRNAME" gives an error.
 
 Special Considerations:
 
