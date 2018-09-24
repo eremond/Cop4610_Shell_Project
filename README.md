@@ -39,7 +39,7 @@ Known Bugs & Unfinished Portions:
 Special Considerations:
  • In the "exit" built-in, clock_gettime() was used instead of gettimeofday(), which is not always available to certain (notably older)
   Linux versions, along with it being absent on Mac...
- • execvp()
+  
 ==============================
 ==============================
 Report
