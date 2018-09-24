@@ -23,17 +23,23 @@ To Clean:
 $> make clean
 
 Known Bugs & Unfinished Portions:
-  Piping works, but only one can be used at a time.
-  Background processing is somewhat unfinished.
-  "io" command is unfinished.
-  Path resolution is rudamentary.
+ • Piping works, but only one can be used at a time.
+   -> Results from lack of implementation for when an additional "pipe-in" target is supplied.
+ • Background processing is somewhat unfinished. (Zombie processes might occur)
+ • "io" command is unfinished.
+    ->Attempted to complete the built-in using flags and opening the proc/pid/io file.
+    ->Attempt resulted in the fact that variables are not universal between processes, as well as possible path resolution issues.
+ • Path resolution is simple.
     ->Ex: "cd ~" works, "cd ~/DIRNAME" gives an error.
-  There needs to be whitespace between the redirection/pipe and the command.
+    ->Resulting from the lack of splitting the special characters and environment variables from the rest of the line.
+ • There needs to be whitespace between the redirection/pipe and the command.
+ • "echo" built-in does not signal an error when there is a non-existent environment variable.
+ • "$SHELL" environment variable p
 
 Special Considerations:
-  In the "exit" built-in, clock_gettime() was used instead of gettimeofday(), which is not always available to certain (notably older)
+ • In the "exit" built-in, clock_gettime() was used instead of gettimeofday(), which is not always available to certain (notably older)
   Linux versions, along with it being absent on Mac...
-  
+ • execvp()
 ==============================
 ==============================
 Report
